@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Cloner — every word the user sees.
+  Plain language, short sentences. If a sentence needs a technical
+  word, the sentence next to it explains it.
+-->
+<resources>
+    <string name="app_name">App Cloner</string>
+    <string name="admin_label">App Cloner profile owner</string>
+
+    <string name="setup_title">Setup</string>
+    <string name="pick_app_title">Pick an app to clone</string>
+    <string name="clone_detail_title">Clone</string>
+    <string name="limits_title">Limits — read this first</string>
+
+    <!-- Main screen -->
+    <string name="main_title">My clones</string>
+    <string name="profile_ready">Work profile: ready</string>
+    <string name="profile_not_ready">Work profile: not set up</string>
+    <string name="profile_on">Work profile is ON</string>
+    <string name="profile_off">Work profile is OFF</string>
+    <string name="add_clone">Clone an app</string>
+    <string name="open_setup">Open setup</string>
+    <string name="share_file">Share a file with a clone</string>
+    <string name="empty_clones">No clones yet.\n\nTap “Clone an app” and pick one — WhatsApp, TikTok, or any app you use twice.</string>
+    <string name="clones_count">Clones: %1$d of %2$d</string>
+    <string name="frozen_badge">Frozen</string>
+    <string name="open_button">Open</string>
+    <string name="freeze_button">Freeze</string>
+    <string name="unfreeze_button">Unfreeze</string>
+
+    <!-- Menu -->
+    <string name="menu_limits">Limits</string>
+    <string name="menu_backup">Back up clone list</string>
+    <string name="menu_restore">Restore clone list</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_heading">Set up in 5 steps</string>
+    <string name="step1_title">1. What is a work profile?</string>
+    <string name="step1_body">A work profile is a separate, private space on the same phone. Apps cloned into it keep their own login, their own chats, and their own notifications. In the app list they carry a small briefcase badge, so you can tell the clone from the original.</string>
+    <string name="step2_title">2. The “organisation” warning</string>
+    <string name="step2_body">Android will say an organisation will manage this profile. That “organisation” is this app, on your own phone. Nothing is sent anywhere, no one else can see the profile, and you can delete it any time from Settings.</string>
+    <string name="step3_title">3. Battery — let notifications through</string>
+    <string name="step3_body">Some phones stop background apps to save power, which also stops clone notifications. Open the battery settings and allow App Cloner to run in the background. On Xiaomi phones this step matters most.</string>
+    <string name="step3_button">Open battery settings</string>
+    <string name="step3_done">Done — battery step finished.</string>
+    <string name="step4_title">4. Notifications (Android 13 and newer)</string>
+    <string name="step4_body">Allow notifications so a clone can tell you about a new message without opening this app.</string>
+    <string name="step4_button">Allow notifications</string>
+    <string name="step4_done">Done — notifications allowed.</string>
+    <string name="step5_title">5. Create the work profile</string>
+    <string name="step5_body">Android’s own setup screen runs now. Read it and accept — the profile is created on your phone, and nothing leaves it.</string>
+    <string name="step5_button">Create work profile</string>
+    <string name="step5_done">Done — work profile is ready.</string>
+    <string name="step5_ready">Work profile is ready</string>
+    <string name="setup_limits_link">What App Cloner cannot do — read the limits</string>
+
+    <!-- App picker -->
+    <string name="picker_hint">Only apps with a home screen icon are listed. System apps are listed too, but most of them are not worth cloning.</string>
+    <string name="picker_loading">Loading apps…</string>
+    <string name="picker_empty">No apps found.</string>
+    <string name="split_note">Split APK — base + extra parts</string>
+    <string name="cloned_badge">Cloned</string>
+
+    <!-- Clone detail -->
+    <string name="detail_name_label">Name on the home screen</string>
+    <string name="detail_name_hint">For example: WhatsApp 2</string>
+    <string name="detail_save_name">Save name</string>
+    <string name="detail_pick_icon">Pick a new icon</string>
+    <string name="detail_shortcut">Add home screen shortcut</string>
+    <string name="detail_freeze">Freeze / unfreeze</string>
+    <string name="detail_remove">Remove clone</string>
+    <string name="detail_frozen_note">This clone is frozen: it does not run and sends no notifications. Unfreeze it to use it again.</string>
+    <string name="detail_package_label">Original app</string>
+
+    <!-- Limits screen -->
+    <string name="limits_heading">Honest limits</string>
+    <string name="limits_body">Work profile clones are real installs.\n\nNotifications arrive normally, and banking apps work in a clone, because the clone is a genuine second install of the same app — not a trick copy.\n\nSandbox clones (coming in V2) are different: banking will not work in a sandbox, and notifications may arrive late, because the sandbox cannot pass the checks banks rely on.\n\nNo promise of 100 live accounts.\n\nOne phone can hold a few copies. A hundred accounts on one phone gets noticed and banned by the apps themselves. V1 allows 2 clones.\n\nProxy is off by default.\n\nA proxy is an advanced option for V2 only, and it does not hide the phone — a proxy can leak the real address, so it is never sold as protection.\n\nUpdates do not break clones.\n\nA clone is a separate install, so updating the original app leaves the clone alone. If a clone ever stops opening after an update, open its detail screen and re-clone it.\n\nSome apps refuse a second copy.\n\nGoogle apps, WhatsApp, YouTube, Snapchat and OneDrive check for this and may refuse to run cloned. That is their decision, not a bug in this app — the Limits list is kept up to date in the README.</string>
+</resources>

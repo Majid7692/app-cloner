@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Cloner — AndroidManifest.
+  Written from scratch for Majid Ali, 2026. MIT License.
+-->
+<!--
+  The package attribute is required by aapt2 link. In a Gradle build
+  AGP injects it from the namespace in app/build.gradle.kts; here the
+  manifest is linked directly, so it is written out in full.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.majidali.appcloner">
+
+    <!--
+      POST_NOTIFICATIONS is a runtime permission on Android 13+.
+      The setup wizard asks for it in plain words; the app works
+      without it, but clone notifications then stay silent.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Deliberately NOT requested: QUERY_ALL_PACKAGES. The app picker
+      lists launchable apps through an intent query
+      (ACTION_MAIN + CATEGORY_LAUNCHER), which needs no such permission.
+      Keeping the permission list short also keeps a future Play Store
+      listing simple.
+    -->
+
+    <application
+        android:name=".AppClonerApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCloner">
+
+        <!--
+          Main screen: the list of clones. It also receives the
+          cross-profile messages: PROFILE_REQUEST when this copy runs
+          inside the work profile, PROFILE_RESULT on the personal
+          side. The filters below are what Android matches against;
+          the cross-profile routing itself is registered by the
+          profile owner (see ProfileManager.registerCrossProfileFilters).
+        -->
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.majidali.appcloner.PROFILE_REQUEST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.majidali.appcloner.PROFILE_RESULT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Setup wizard: profile, permissions, battery. -->
+        <activity
+            android:name=".ui.setup.SetupActivity"
+            android:exported="false"
+            android:label="@string/setup_title"
+            android:parentActivityName=".ui.main.MainActivity" />
+
+        <!-- Pick an installed app to clone. -->
+        <activity
+            android:name=".ui.picker.AppPickerActivity"
+            android:exported="false"
+            android:label="@string/pick_app_title"
+            android:parentActivityName=".ui.main.MainActivity" />
+
+        <!-- One clone: rename, re-icon, shortcut, freeze, remove. -->
+        <activity
+            android:name=".ui.detail.CloneDetailActivity"
+            android:exported="false"
+            android:label="@string/clone_detail_title"
+            android:parentActivityName=".ui.main.MainActivity" />
+
+        <!-- Honest limits, in plain words. -->
+        <activity
+            android:name=".ui.limits.LimitsActivity"
+            android:exported="false"
+            android:label="@string/limits_title"
+            android:parentActivityName=".ui.main.MainActivity" />
+
+        <!--
+          Device admin receiver. This is what makes the managed work
+          profile possible: Android hands this component the profile
+          owner role when the user accepts provisioning.
+          No password or lock policies are requested here; the receiver
+          only owns the profile so clones can be installed, hidden
+          (freeze) and removed inside it.
+        -->
+        <receiver
+            android:name=".admin.CloneDeviceAdminReceiver"
+            android:exported="false"
+            android:label="@string/admin_label"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          Receives PackageInstaller results (install / uninstall).
+          It is only ever invoked by an explicit PendingIntent the
+          app itself created, so it stays unexported.
+        -->
+        <receiver
+            android:name=".data.install.InstallResultReceiver"
+            android:exported="false" />
+
+        <!--
+          FileProvider for the file shuttle between the personal and
+          work profiles. Files are shared ONLY as content:// URIs with
+          a one-time grant. Raw file paths are never used: on some
+          phones (notably Huawei and Oppo) a raw path handed to the
+          other profile resolves to the wrong file or nothing at all.
+          See FileShuttle.kt and the README section "Sharing files".
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.majidali.appcloner.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!--
+          androidx.startup provider. Gradle's manifest merger normally
+          copies this entry out of the lifecycle-process library; this
+          project links the manifest directly with aapt2, so the entry
+          is written here by hand (authorities are literal — aapt2 does
+          not substitute ${applicationId}). It starts
+          ProcessLifecycleInitializer so the lifecycle libraries work
+          the same way they do in a Gradle build. Without it the app
+          would still launch, but ProcessLifecycleOwner would never
+          receive lifecycle events.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="com.majidali.appcloner.androidx-startup"
+            android:exported="false">
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
+</manifest>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Device admin policies requested by App Cloner.
+  Intentionally empty: the app only needs the profile owner role so it
+  can install, hide and remove apps inside its own managed work
+  profile. It does not set passwords, lock the screen, or wipe data,
+  and it never will. The setup wizard says this in plain words.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies />
+</device-admin>
