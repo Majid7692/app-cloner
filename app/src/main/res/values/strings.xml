@@ -73,6 +73,12 @@
     <string name="detail_frozen_note">This clone is frozen: it does not run and sends no notifications. Unfreeze it to use it again.</string>
     <string name="detail_package_label">Original app</string>
 
+    <!-- Crash report screen -->
+    <string name="crash_title">The app crashed</string>
+    <string name="crash_body">App Cloner closed because of an error. The details below say exactly what went wrong. Share them, or take a screenshot — the next fix can then target the real cause instead of guessing.</string>
+    <string name="crash_share">Share crash details</string>
+    <string name="crash_dismiss">Dismiss — try the app again</string>
+
     <!-- Limits screen -->
     <string name="limits_heading">Honest limits</string>
     <string name="limits_body">Work profile clones are real installs.\n\nNotifications arrive normally, and banking apps work in a clone, because the clone is a genuine second install of the same app — not a trick copy.\n\nSandbox clones (coming in V2) are different: banking will not work in a sandbox, and notifications may arrive late, because the sandbox cannot pass the checks banks rely on.\n\nNo promise of 100 live accounts.\n\nOne phone can hold a few copies. A hundred accounts on one phone gets noticed and banned by the apps themselves. V1 allows 2 clones.\n\nProxy is off by default.\n\nA proxy is an advanced option for V2 only, and it does not hide the phone — a proxy can leak the real address, so it is never sold as protection.\n\nUpdates do not break clones.\n\nA clone is a separate install, so updating the original app leaves the clone alone. If a clone ever stops opening after an update, open its detail screen and re-clone it.\n\nSome apps refuse a second copy.\n\nGoogle apps, WhatsApp, YouTube, Snapchat and OneDrive check for this and may refuse to run cloned. That is their decision, not a bug in this app — the Limits list is kept up to date in the README.</string>

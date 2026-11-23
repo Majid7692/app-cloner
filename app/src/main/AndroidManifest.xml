@@ -90,6 +90,18 @@
             android:parentActivityName=".ui.main.MainActivity" />
 
         <!--
+          Crash report: shows the error saved by CrashReporter after
+          a crash, in plain text the user can share or screenshot.
+          Framework views only, so it opens even when the crash came
+          from a library. Never launched from the launcher.
+        -->
+        <activity
+            android:name=".ui.crash.CrashReportActivity"
+            android:exported="false"
+            android:label="@string/crash_title"
+            android:parentActivityName=".ui.main.MainActivity" />
+
+        <!--
           Device admin receiver. This is what makes the managed work
           profile possible: Android hands this component the profile
           owner role when the user accepts provisioning.

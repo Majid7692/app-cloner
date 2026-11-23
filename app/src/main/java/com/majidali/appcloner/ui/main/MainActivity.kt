@@ -13,7 +13,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.majidali.appcloner.AppClonerApp
 import com.majidali.appcloner.R
+import com.majidali.appcloner.data.crash.CrashReporter
 import com.majidali.appcloner.data.profile.ProfileManager
+import com.majidali.appcloner.ui.crash.CrashReportActivity
 import com.majidali.appcloner.databinding.ActivityMainBinding
 import com.majidali.appcloner.domain.model.CloneInfo
 import com.majidali.appcloner.domain.model.CloneLimits
@@ -98,6 +100,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A crash report from an earlier run comes first: show it
+        // instead of the main screen, so the error is seen, not lost.
+        if (showSavedCrashReport()) return
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
@@ -199,6 +204,23 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    /**
+     * Open the crash screen when an earlier run left a report.
+     * Returns true when the crash screen was opened (this screen
+     * then closes). Any failure here falls through to the normal
+     * main screen — a broken report must never block the app.
+     */
+    private fun showSavedCrashReport(): Boolean {
+        return try {
+            if (!CrashReporter.hasSavedReport(this)) return false
+            startActivity(Intent(this, CrashReportActivity::class.java))
+            finish()
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
