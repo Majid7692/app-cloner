@@ -16,8 +16,8 @@ android {
         // V1 ships no native (.so) libraries at all, so it is 16 KB
         // compatible by construction. See README "16 KB page size".
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     buildTypes {

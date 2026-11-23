@@ -1,6 +1,7 @@
 package com.majidali.appcloner
 
 import android.app.Application
+import com.majidali.appcloner.data.crash.CrashReporter
 import com.majidali.appcloner.data.local.BackupManager
 import com.majidali.appcloner.data.local.CloneStore
 import com.majidali.appcloner.data.profile.ProfileManager
@@ -32,6 +33,10 @@ class AppClonerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // First, before anything else is built: catch any crash and
+        // save the exact error, so a crash on a phone can be fixed
+        // from the real cause instead of a guess. See CrashReporter.
+        CrashReporter.install(this)
         container = AppContainer(this)
     }
 }

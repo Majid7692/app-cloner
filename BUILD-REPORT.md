@@ -280,3 +280,77 @@ Write down: which step, what the screen showed (exact words), and whether the ap
 3. **Device test (§7)** — only MAJID on the Redmi 13C can prove cloning, notifications, freeze, profile toggle and restart behaviour.
 4. **Screenshots** — add real Redmi 13C captures to the README only after §7 passes.
 5. **Publish** — push to `Majid7692/app-cloner`, tag v1.0.0, GitHub Release with the APK + SHA-256 (parent's step).
+
+## v1.0.1 — crash reporter (2026-11-23)
+
+### Why
+v1.0.0 crashed on first open on the Redmi 13C (Android 14, HyperOS):
+tap the icon, instant return to the home screen, every time. A full
+static review of the v1.0.0 build found NO provable cause:
+- `gen-bindings.py` `bind()` throws on a missing view (AGP-like
+  behaviour), but every binding matches its layout (javap-checked);
+  no `<include>` / `<merge>` in any layout.
+- Every `@string` / `@color` reference resolves in every config
+  (checked programmatically); the only "missing" styles are
+  Material library parents resolved from the material AAR.
+- Launch path traced end to end: Application → AppContainer
+  (trivial constructors, no I/O) → MainActivity. ProfileManager
+  calls are try/catch-guarded; CloneStore handles a missing file.
+  No API 35/36-only call on the launch path (the only newer-API
+  calls live in the install session, not at launch).
+- Content providers: FileProvider (lazy) and androidx.startup
+  InitializationProvider → ProcessLifecycleInitializer (in dex).
+  No known HyperOS launch rejection for these declarations;
+  authorities are unique; no QUERY_ALL_PACKAGES.
+- The VM has no emulator / system image / KVM, so the crash could
+  not be reproduced here. No speculative fix was made to working
+  code.
+
+### What 1.0.1 adds
+A crash reporter, so the next crash names its real cause:
+- `data/crash/CrashReporter.kt` — installs a default uncaught-
+  exception handler FIRST in `AppClonerApp.onCreate`, before the
+  container is built. It writes the full stack trace + device info
+  (model, Android version, app version, time) to private storage
+  (`crash-report.txt`) and opens the crash screen. Every step is
+  guarded; a failure falls back to Android's own crash handling.
+  No permission, no network, no third-party SDK.
+- `ui/crash/CrashReportActivity.kt` + `activity_crash_report.xml`
+  — plain-text report with Share and Dismiss. Framework views
+  only, no view binding, plain framework button style, so it can
+  open even when the crash came from a library. If it fails to
+  open, it deletes the report and closes (never traps the user).
+- `MainActivity.onCreate` checks for a saved report FIRST, before
+  inflating anything, and opens the crash screen instead.
+- Registered in the manifest (6 activities now). 4 new strings
+  in `strings.xml`, plain words, no ads/tracker/AI wording.
+
+### Verification (same as v1.0.0)
+- `build-apk.sh` 0 errors; 1 new harmless warning (versionCode
+  Int deprecated in Java).
+- Badging: package `com.majidali.appcloner`, versionCode 2,
+  versionName 1.0.1, compileSdk 36, minSdk 28, targetSdk 36,
+  only `POST_NOTIFICATIONS`, label "App Cloner".
+- `apksigner verify`: Verifies, v3 true, 1 signer, CN=Majid Ali.
+- Dex: 6,807 classes; CrashReporter, CrashReportActivity,
+  ActivityCrashReportBinding, MainActivity, AppClonerApp present.
+- APK manifest: 6 activities incl. `.ui.crash.CrashReportActivity`.
+- APK: `app-cloner-build/app-cloner-debug.apk`, 4,978,202 bytes,
+  SHA-256 `0b325362424ba84e991c60ae181b164f1d0500a39fb955aef26a3a20b5499b36`.
+
+### IMPORTANT — install note
+The debug keystore is regenerated on every manual build (the
+script wipes `$OUT`), so v1.0.1 is signed with a DIFFERENT debug
+key than v1.0.0 (cert SHA-256 `c3bf95f2…` vs v1.0.0
+`30afe0cd…`). Android refuses an update signed with a different
+key: **uninstall v1.0.0 from the phone first, then install
+v1.0.1.** (A future release-key build will not have this problem.)
+
+### Phone steps for 1.0.1
+1. Uninstall the v1.0.0 App Cloner from the Redmi 13C.
+2. Install the v1.0.1 APK from the new pre-release.
+3. Open the app. If it opens, the crash is gone — run the §7
+   checklist as planned.
+4. If it crashes again, open it once more: the crash screen shows
+   the exact error. Screenshot it or tap Share and send it — that
+   text names the real cause for the next fix.
