@@ -1,10 +1,10 @@
 package com.majidali.appcloner.ui.crash
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import com.majidali.appcloner.R
 import com.majidali.appcloner.data.crash.CrashReporter
 import com.majidali.appcloner.ui.main.MainActivity
@@ -13,13 +13,14 @@ import com.majidali.appcloner.ui.main.MainActivity
  * Shows the crash report saved by [CrashReporter], in plain text.
  *
  * The layout uses framework views only (no Material widgets) and
- * this screen uses no view binding, so it can open even when the
- * crash came from a library or a generated binding. If this screen
- * itself fails to open, it deletes the report and closes, so the
- * user is never stuck on a broken crash screen — the main screen
- * then opens normally.
+ * this screen extends plain android.app.Activity — not
+ * AppCompatActivity — and runs under a plain framework theme, so it
+ * can open even when the crash came from an AppCompat/Material
+ * library. It uses no view binding. If this screen itself fails to
+ * open, it deletes the report and closes, so the user is never stuck
+ * on a broken crash screen — the main screen then opens normally.
  */
-class CrashReportActivity : AppCompatActivity() {
+class CrashReportActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

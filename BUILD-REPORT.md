@@ -354,3 +354,126 @@ v1.0.1.** (A future release-key build will not have this problem.)
 4. If it crashes again, open it once more: the crash screen shows
    the exact error. Screenshot it or tap Share and send it — that
    text names the real cause for the next fix.
+
+## v1.0.2 — launch crash, root cause found and fixed (2026-11-23)
+
+### Root cause — CONFIRMED from the phone, not guessed
+The user sent the phone's own "View summary" screenshots after the
+v1.0.1 crash. The trace names it exactly:
+
+```
+java.lang.NoClassDefFoundError: Failed resolution of: Landroidx/startup/R$string;
+  at androidx.startup.AppInitializer.discoverAndInitialize(AppInitializer.java:216)
+  at androidx.startup.AppInitializer.discoverAndInitialize(AppInitializer.java:206)
+  at androidx.startup.InitializationProvider.onCreate(InitializationProvider.java:45)
+  at android.content.ContentProvider.attachInfo(...)
+  -> ActivityThread.installProvider -> installContentProviders
+  -> handleBindApplication
+Caused by: java.lang.ClassNotFoundException: androidx.startup.R$string
+```
+
+Why the class was missing: the manual build (`aapt2` + `kotlinc` +
+`d8`) only ever generated R.java for the app package
+(`com.majidali.appcloner`). Library code accesses its OWN package's
+R class at runtime — AAR R fields are non-final, so the compiler
+does not inline them and the bytecode keeps a real field reference
+(`Landroidx/startup/R$string;`). The v1.0.1 dex contained ZERO
+library R classes (verified: `dexdump` class list, 6,807 classes,
+no `*/R$*` class at all), while the dex code references library R
+fields 2,980 times. The hand-written `InitializationProvider` entry
+in the manifest ran before `Application.onCreate`, so the crash
+reporter (installed first in `Application.onCreate`) never ran and
+the crash screen could never appear — exactly the observed loop
+(instant crash every launch, only the MIUI system dialog, reporter
+screen never shows).
+
+Why removing the provider alone would NOT have fixed it: the next
+library R access is in `AppCompatActivity.onCreate`
+(`androidx.appcompat.R$styleable`, 370 references in the dex), so
+MainActivity — and the crash screen itself, which also extended
+AppCompatActivity — would have crashed the same way one step later.
+The fix had to close the whole failure class, not just the one
+provider.
+
+### What 1.0.2 changes
+- `AndroidManifest.xml`: the `androidx.startup`
+  `InitializationProvider` entry is REMOVED, with a comment
+  explaining why. V1 never uses `ProcessLifecycleOwner` (no code
+  references it), so nothing is lost.
+- `build-apk.sh` + new `app-cloner-build/gen-library-r.py`: after
+  `aapt2 link`, every library's R class is generated from the
+  linked R.java (final IDs) + each AAR's R.txt (which names belong
+  to which package; the package comes from the AAR's manifest).
+  53 packages, 13,556 fields in this build. 30 R.txt entries are
+  not in the linked R.java (unused `abc_*` drawables etc.) — none
+  of them is referenced by the dex, verified.
+- `build-apk.sh`: the generated R.java files are now compiled with
+  `javac -encoding UTF-8`, not kotlinc. Found while fixing this:
+  kotlinc 2.0.21 does NOT compile `.java` files at all ("error: no
+  source files" on a lone R.java), which is why even the app's own
+  R.java never reached the dex — the first v1.0.2 build attempt
+  still shipped zero library R classes. The app's R constants are
+  inlined by kotlinc, so the app never needed its R class; the
+  libraries do.
+- New `app-cloner-build/verify-dex-r.py`, run by `build-apk.sh` at
+  the end of every build: it checks that every R class AND every R
+  field the dex references exists in the dex. (Its first version
+  used plain `dexdump` instead of `dexdump -d`, so it saw zero
+  references and passed vacuously — fixed to use `-d` for
+  references and the plain dump for definitions, plus a
+  leading-whitespace-tolerant class parser.)
+- `ui/crash/CrashReportActivity.kt`: now extends plain
+  `android.app.Activity` under a plain framework theme
+  (`@android:style/Theme.Material.Light.NoActionBar`, resolved in
+  the APK manifest as `@0x01030241`), not AppCompatActivity — the
+  crash screen opens even if an AppCompat/Material library is the
+  thing that broke.
+- `AppClonerApp.kt`: building `AppContainer` is wrapped in
+  try/catch; a failure there is saved as a crash report
+  (`CrashReporter.saveReport`, new public method) and the launch
+  continues so the main screen shows it on the same launch, instead
+  of the app dying before it starts.
+- `app/build.gradle.kts` versionName 1.0.2 (versionCode stays 2 —
+  see install note). `CHANGELOG.md` 1.0.2 entry.
+
+### Verification (v1.0.2 APK)
+- `build-apk.sh` 0 errors; 3 harmless kotlinc warnings (same as
+  before: `versionCode` deprecated, `ACTION_UNINSTALL_PACKAGE`
+  deprecated, always-true null check).
+- Badging: package `com.majidali.appcloner`, versionCode 2,
+  versionName 1.0.2, compileSdk 36, minSdk 28, targetSdk 36,
+  only `POST_NOTIFICATIONS`, label "App Cloner".
+- `apksigner verify`: Verifies, v3 true, 1 signer, cert SHA-256
+  `c3bf95f262634ae658ff4c0e5adef912ffecb2cd8ded44640623bd6648d1e417`
+  — the SAME key as released v1.0.1 (verified against the
+  downloaded release APK), so v1.0.2 installs OVER v1.0.1.
+- `verify-dex-r.py`: dex 7,068 classes (was 6,807), 518 R classes,
+  2,980 R field references, 74 R classes referenced, 0 missing —
+  "OK: every referenced R class and field exists in the dex".
+  `androidx/startup/R$string` is present in the dex.
+- APK manifest (`aapt2 dump xmltree`): 6 activities, 2 receivers,
+  1 provider (FileProvider only,
+  `com.majidali.appcloner.fileprovider`); NO InitializationProvider;
+  CrashReportActivity theme is the framework theme.
+- 0 native `.so` files (16 KB page-size rule still satisfied
+  trivially).
+- APK: `app-cloner-build/app-cloner-debug.apk`, 5,088,794 bytes,
+  SHA-256 `79ecb599aa6cf01388480ec2f875bf0e7b41427339b9ce863bc197d3da39bc39`.
+
+### Install note — v1.0.2 needs NO uninstall
+v1.0.2 is signed with the same debug key as v1.0.1, so it installs
+directly over v1.0.1. (v1.0.0 used a different key and did need an
+uninstall; that was a one-off.) One wrinkle to know: versionCode is
+still 2, the same as v1.0.1 — Android allows a reinstall with the
+same versionCode and the same key, so the install works, but the
+next version should bump versionCode to 3 so the version number
+always moves forward.
+
+### Phone steps for 1.0.2
+1. Install the v1.0.2 APK from the new pre-release, over v1.0.1
+   (no uninstall needed).
+2. Open the app. It should now open to the main screen — run the
+   §7 checklist as planned.
+3. If it still crashes, open it once more: the crash screen now
+   runs on plain framework classes, so it should show the exact
+   error. Screenshot it or tap Share and send it.
