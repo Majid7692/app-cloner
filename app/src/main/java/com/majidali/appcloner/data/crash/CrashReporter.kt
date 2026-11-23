@@ -53,11 +53,11 @@ object CrashReporter {
                 previous?.uncaughtException(thread, throwable)
                 return@setDefaultUncaughtExceptionHandler
             }
-            try {
-                writeReport(appContext, throwable)
-            } catch (_: Exception) {
-                // Writing must never hide the original crash.
-            }
+            // Save the exact error, then try to show it at once.
+            // (The screen may not open — the process is dying — but
+            // the file is there, and the main screen shows it next
+            // launch.)
+            saveReport(appContext, throwable)
             var shown = false
             try {
                 val intent = Intent(appContext, CrashReportActivity::class.java).apply {
@@ -110,6 +110,22 @@ object CrashReporter {
         try {
             File(context.filesDir, FILE_NAME).delete()
         } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Save one crash report to the private report file. Never throws:
+     * a failure to write must never hide the original crash. Public
+     * so the Application can also record a startup failure itself
+     * (see AppClonerApp): a crash while building the app's objects
+     * is written here the same way, so the main screen can show it
+     * on this very launch instead of dying before it starts.
+     */
+    fun saveReport(context: Context, throwable: Throwable) {
+        try {
+            writeReport(context.applicationContext, throwable)
+        } catch (_: Exception) {
+            // Writing must never hide the original crash.
         }
     }
 

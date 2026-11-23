@@ -94,11 +94,17 @@
           a crash, in plain text the user can share or screenshot.
           Framework views only, so it opens even when the crash came
           from a library. Never launched from the launcher.
+
+          It runs under a plain framework theme (not the app's
+          Material3 theme) and extends android.app.Activity, not
+          AppCompatActivity — the crash screen must open even if an
+          AppCompat/Material library is the thing that broke.
         -->
         <activity
             android:name=".ui.crash.CrashReportActivity"
             android:exported="false"
             android:label="@string/crash_title"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar"
             android:parentActivityName=".ui.main.MainActivity" />
 
         <!--
@@ -151,23 +157,20 @@
         </provider>
 
         <!--
-          androidx.startup provider. Gradle's manifest merger normally
-          copies this entry out of the lifecycle-process library; this
-          project links the manifest directly with aapt2, so the entry
-          is written here by hand (authorities are literal — aapt2 does
-          not substitute ${applicationId}). It starts
-          ProcessLifecycleInitializer so the lifecycle libraries work
-          the same way they do in a Gradle build. Without it the app
-          would still launch, but ProcessLifecycleOwner would never
-          receive lifecycle events.
+          NO androidx.startup provider on purpose. v1.0.1 declared
+          one by hand (lifecycle-process needs it in a Gradle build),
+          and it crashed every launch on the Redmi 13C with
+          NoClassDefFoundError: androidx.startup.R$string — the
+          manual aapt2 build only generates R.java for the app
+          package, so the startup library's R class was never in the
+          dex. The provider runs before Application.onCreate, so the
+          crash reporter never got installed and the crash screen
+          could never appear. V1 never uses ProcessLifecycleOwner
+          (nothing in the code references it), so the provider is
+          simply removed. The manual build now also generates every
+          library's R class from the linked R.java (see build-apk.sh
+          and gen-library-r.py), so no library R access can fail
+          this way again.
         -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.majidali.appcloner.androidx-startup"
-            android:exported="false">
-            <meta-data
-                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-                android:value="androidx.startup" />
-        </provider>
     </application>
 </manifest>

@@ -31,13 +31,31 @@ class AppClonerApp : Application() {
     lateinit var container: AppContainer
         private set
 
+    /**
+     * Set when building the container failed. The main screen checks
+     * for a saved crash report first, so a startup failure is shown
+     * on the crash screen instead of killing the app before it
+     * starts. Null on a normal launch.
+     */
+    var containerInitError: Throwable? = null
+        private set
+
     override fun onCreate() {
         super.onCreate()
         // First, before anything else is built: catch any crash and
         // save the exact error, so a crash on a phone can be fixed
         // from the real cause instead of a guess. See CrashReporter.
         CrashReporter.install(this)
-        container = AppContainer(this)
+        // The container must never kill the launch: if building it
+        // throws, write the error as a crash report and let the main
+        // screen show it — the user then sees what broke instead of
+        // the app closing back to the home screen every time.
+        try {
+            container = AppContainer(this)
+        } catch (t: Throwable) {
+            containerInitError = t
+            CrashReporter.saveReport(this, t)
+        }
     }
 }
 

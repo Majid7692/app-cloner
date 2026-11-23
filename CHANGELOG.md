@@ -5,6 +5,30 @@ Keep a Changelog, and the project uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-11-23
+
+### Fixed
+- Launch crash on Redmi 13C (root cause, from the phone's own "View
+  summary"): `NoClassDefFoundError: androidx.startup.R$string`,
+  thrown in `InitializationProvider.onCreate` — before
+  `Application.onCreate`, so the v1.0.1 crash reporter never ran
+  and its screen could never appear. The manual aapt2 build only
+  generated R.java for the app package, so no library R class was
+  in the dex at all. Fix: the startup provider is removed (V1
+  never uses ProcessLifecycleOwner), and the build now generates
+  every library's R class from the linked R.java + each AAR's
+  R.txt (`gen-library-r.py`), with a build-time check that every
+  R class the dex references exists in it (`verify-dex-r.py`).
+  Removing the provider alone would only have moved the crash to
+  AppCompatActivity's first R access — the generated R classes
+  close the whole failure class.
+- Crash screen hardened: it now extends plain `android.app.Activity`
+  under a plain framework theme instead of AppCompatActivity, so it
+  opens even if an AppCompat/Material library is the thing that
+  broke. `Application.onCreate` can no longer throw while building
+  the container — a failure there is saved as a crash report and
+  the main screen shows it on the same launch.
+
 ## [1.0.1] — 2026-11-23
 
 ### Added
