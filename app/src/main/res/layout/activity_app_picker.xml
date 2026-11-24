@@ -20,6 +20,15 @@
         android:textColor="@color/muted_text"
         android:textSize="15sp" />
 
+    <EditText
+        android:id="@+id/searchInput"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:hint="@string/picker_search_hint"
+        android:inputType="text"
+        android:textSize="17sp" />
+
     <TextView
         android:id="@+id/loadingText"
         android:layout_width="match_parent"

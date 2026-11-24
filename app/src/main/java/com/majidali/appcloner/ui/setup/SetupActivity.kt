@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,7 +46,10 @@ class SetupActivity : AppCompatActivity() {
     private val provisioningLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
+        // The result code alone is not proof: some phones answer OK
+        // and still refuse the profile, and some answer "cancelled"
+        // after creating it. Only the profile itself decides.
+        if (app.container.profileManager.isProfileReady()) {
             binding.step5Done.visibility = View.VISIBLE
             binding.createProfileButton.isEnabled = false
             UiHelpers.toast(this, "Work profile created. You can start cloning.")
@@ -53,8 +57,12 @@ class SetupActivity : AppCompatActivity() {
             UiHelpers.showError(
                 this,
                 "Profile was not created",
-                "The setup was cancelled or refused. You can try " +
-                    "again — nothing was changed on your phone."
+                "The setup was cancelled or refused, and no work " +
+                    "profile was made. Before trying again, check " +
+                    "two things: your Mi account is signed in " +
+                    "(Xiaomi blocks profile setup without it), and " +
+                    "no work profile already exists on this phone. " +
+                    "Nothing was changed on your phone."
             )
         }
     }
@@ -64,11 +72,26 @@ class SetupActivity : AppCompatActivity() {
     ) { granted ->
         binding.step4Done.visibility = if (granted) View.VISIBLE else View.GONE
         if (!granted) {
-            UiHelpers.toast(
-                this,
-                "No problem — clones will still work, but their " +
-                    "notifications may stay silent."
-            )
+            // Denied twice, Android stops asking: the button then
+            // does nothing, so say where the switch lives instead
+            // of leaving the step stuck with no way forward.
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                UiHelpers.showError(
+                    this,
+                    "Notifications are blocked",
+                    "Notifications were turned off for App Cloner, " +
+                        "so the button cannot ask again. Open " +
+                        "Settings, then Apps, then App Cloner, then " +
+                        "Notifications, and turn them on — clones " +
+                        "can then tell you about new messages."
+                )
+            } else {
+                UiHelpers.toast(
+                    this,
+                    "No problem — clones will still work, but their " +
+                        "notifications may stay silent."
+                )
+            }
         }
     }
 
@@ -79,19 +102,21 @@ class SetupActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        // Step 3 — battery guide.
+        // Step 3 — battery guide. The checkmark is only shown when
+        // the phone really lets this app run in the background (see
+        // refreshBatteryStep): tapping the button is not proof, the
+        // user still has to pick the setting.
         binding.batteryButton.setOnClickListener {
             try {
                 startActivity(
                     Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                 )
-                binding.step3Done.visibility = View.VISIBLE
             } catch (e: Exception) {
                 UiHelpers.showError(
                     this,
                     "Could not open settings",
-                    "Open Settings yourself, then Battery, and allow " +
-                        "App Cloner to run in the background."
+                    "Open Settings yourself, then Battery, find App " +
+                        "Cloner, and set it to No restrictions."
                 )
             }
         }
@@ -109,8 +134,22 @@ class SetupActivity : AppCompatActivity() {
 
         // Step 5 — create the profile.
         binding.createProfileButton.setOnClickListener {
-            val intent = app.container.profileManager.provisioningIntent()
-            provisioningLauncher.launch(intent)
+            try {
+                val intent = app.container.profileManager.provisioningIntent()
+                provisioningLauncher.launch(intent)
+            } catch (e: Exception) {
+                // No system screen handles provisioning on this
+                // phone (some phones block work profiles entirely):
+                // say so plainly instead of crashing.
+                UiHelpers.showError(
+                    this,
+                    "This phone cannot create a work profile",
+                    "Android on this phone does not offer work " +
+                        "profile setup. Some phones block it — " +
+                        "check with the phone maker. Nothing was " +
+                        "changed on your phone."
+                )
+            }
         }
 
         binding.limitsLink.setOnClickListener {
@@ -124,6 +163,22 @@ class SetupActivity : AppCompatActivity() {
         super.onResume()
         refreshProfileStep()
         refreshNotificationStep()
+        refreshBatteryStep()
+    }
+
+    /**
+     * The battery step is done only when the phone really lets this
+     * app run in the background — checked here every time the
+     * wizard comes back, not when the button was tapped.
+     */
+    private fun refreshBatteryStep() {
+        val whitelisted = try {
+            val powerManager = getSystemService(PowerManager::class.java)
+            powerManager.isIgnoringBatteryOptimizations(packageName)
+        } catch (e: Exception) {
+            false
+        }
+        binding.step3Done.visibility = if (whitelisted) View.VISIBLE else View.GONE
     }
 
     private fun refreshProfileStep() {

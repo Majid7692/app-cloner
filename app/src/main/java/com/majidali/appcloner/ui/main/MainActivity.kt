@@ -48,6 +48,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: MainViewModel
     private lateinit var adapter: CloneListAdapter
 
+    // True while the code sets the switch itself. A programmatic
+    // setChecked fires the switch listener too, and without this
+    // guard the listener would switch the profile on every launch
+    // (the first value the screen shows) without the user touching
+    // anything — including turning a quiet profile back ON.
+    private var programmaticSwitchChange = false
+
     private val app get() = application as AppClonerApp
 
     private val exportBackupLauncher = registerForActivityResult(
@@ -141,6 +148,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SetupActivity::class.java))
         }
         binding.profileSwitch.setOnCheckedChangeListener { _, isChecked ->
+            // Ignore changes the screen itself made (see
+            // programmaticSwitchChange): only a real tap switches
+            // the profile.
+            if (programmaticSwitchChange) return@setOnCheckedChangeListener
             if (!viewModel.setProfileEnabled(isChecked)) {
                 UiHelpers.toast(this, "The profile could not be switched. Open Setup.")
                 viewModel.refresh()
@@ -156,16 +167,30 @@ class MainActivity : AppCompatActivity() {
                 if (clones.isEmpty()) View.VISIBLE else View.GONE
             binding.slotsText.text =
                 "Clones: ${clones.size} of ${CloneLimits.MAX_CLONES_V1}"
-            binding.addCloneButton.isEnabled = clones.size < CloneLimits.MAX_CLONES_V1
+            updateActionStates()
+            updateNextStep()
         }
         viewModel.profileReady.observe(this) { ready ->
             binding.profileStatus.text =
                 if (ready) "Work profile: ready" else "Work profile: not set up"
             binding.setupButton.visibility =
                 if (ready) View.GONE else View.VISIBLE
+            // No profile, no switch: a switch that can be flipped
+            // with nothing behind it is how the screen once showed
+            // ON next to "not set up".
+            binding.profileSwitch.isEnabled = ready
+            if (!ready) {
+                programmaticSwitchChange = true
+                binding.profileSwitch.isChecked = false
+                programmaticSwitchChange = false
+            }
+            updateActionStates()
+            updateNextStep()
         }
         viewModel.profileAwake.observe(this) { awake ->
+            programmaticSwitchChange = true
             binding.profileSwitch.isChecked = awake
+            programmaticSwitchChange = false
             binding.profileSwitch.text =
                 if (awake) "Work profile is ON" else "Work profile is OFF"
         }
@@ -221,6 +246,49 @@ class MainActivity : AppCompatActivity() {
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    /**
+     * Enable only the actions that can do something right now.
+     * "Clone an app" needs a work profile; "Share a file" needs at
+     * least one clone to share with. A button that is enabled and
+     * then fails is worse than a button that waits.
+     */
+    private fun updateActionStates() {
+        val ready = viewModel.profileReady.value == true
+        val clones = viewModel.clones.value.orEmpty()
+        binding.addCloneButton.isEnabled =
+            ready && clones.size < CloneLimits.MAX_CLONES_V1
+        binding.shareFileButton.isEnabled = clones.isNotEmpty()
+    }
+
+    /**
+     * One line that tells the user exactly what to do next, from the
+     * real state — never a guess, never a step that is already done.
+     * The empty text changes with it, so the screen never tells the
+     * user to tap a button that is switched off.
+     */
+    private fun updateNextStep() {
+        val ready = viewModel.profileReady.value == true
+        val clones = viewModel.clones.value.orEmpty()
+        when {
+            !ready -> {
+                binding.nextStepText.text = getString(R.string.next_step_setup)
+                binding.emptyState.text = getString(R.string.empty_no_profile)
+            }
+            clones.isEmpty() -> {
+                binding.nextStepText.text = getString(R.string.next_step_clone)
+                binding.emptyState.text = getString(R.string.empty_clones)
+            }
+            clones.size >= CloneLimits.MAX_CLONES_V1 -> {
+                binding.nextStepText.text = getString(R.string.next_step_full)
+                binding.emptyState.text = getString(R.string.empty_clones)
+            }
+            else -> {
+                binding.nextStepText.text = getString(R.string.next_step_test)
+                binding.emptyState.text = getString(R.string.empty_clones)
+            }
         }
     }
 
@@ -396,8 +464,15 @@ class MainActivity : AppCompatActivity() {
                 if (success) {
                     val label = intent.getStringExtra(ProfileManager.EXTRA_LABEL)
                         ?: packageName
+                    // Numbered copy, like other cloners do: the list
+                    // and the home screen shortcut read "WhatsApp 2",
+                    // so the clone is easy to tell from the original.
+                    // The app inside the profile keeps its own name;
+                    // only the list and the shortcut use this name,
+                    // and the detail screen can change it.
+                    val displayName = "$label 2"
                     app.container.cloneRepository.addClone(
-                        CloneInfo(packageName = packageName, customName = label)
+                        CloneInfo(packageName = packageName, customName = displayName)
                     )
                     viewModel.refresh()
                 }

@@ -8,12 +8,18 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.majidali.appcloner.AppClonerApp
+import com.majidali.appcloner.R
 import com.majidali.appcloner.data.profile.ProfileManager
 import com.majidali.appcloner.databinding.ActivityCloneDetailBinding
+import com.majidali.appcloner.domain.model.AppInfo
 import com.majidali.appcloner.domain.model.CloneInfo
+import com.majidali.appcloner.domain.model.CloneResult
 import com.majidali.appcloner.ui.common.UiHelpers
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * One clone: rename it, pick a new icon, add its home screen
@@ -57,6 +63,11 @@ class CloneDetailActivity : AppCompatActivity() {
         }
         binding.cloneNameInput.setText(current.customName)
         binding.clonePackageText.text = current.packageName
+        binding.clonedOnText.text = getString(
+            R.string.detail_cloned_on,
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                .format(Date(current.createdAtEpochMillis))
+        )
         binding.frozenText.visibility =
             if (current.isFrozen) View.VISIBLE else View.GONE
 
@@ -112,6 +123,45 @@ class CloneDetailActivity : AppCompatActivity() {
             finish()
         }
 
+        binding.recloneButton.setOnClickListener {
+            val latest = clone ?: return@setOnClickListener
+            // Re-install the same app into the profile — the fix
+            // when a clone stops opening after an update, or was
+            // removed from the profile outside this app. The list
+            // entry stays (same package), and the main screen
+            // updates it when the profile answers. No new slot is
+            // used: the clone already occupies one.
+            UiHelpers.toast(this, getString(R.string.picker_installing, latest.customName))
+            Thread {
+                val result = app.container.cloneEngine.cloneApp(
+                    AppInfo(
+                        packageName = latest.packageName,
+                        label = latest.customName,
+                        isSystemApp = false,
+                        hasSplits = false
+                    )
+                )
+                runOnUiThread {
+                    when (result) {
+                        is CloneResult.Success -> finish()
+                        is CloneResult.Failure -> {
+                            val command = result.adbCommand
+                            if (command != null) {
+                                UiHelpers.showError(
+                                    this,
+                                    "Re-clone failed",
+                                    result.message + "\n\nCommand:\n$command",
+                                    "Copy command"
+                                ) { copyToClipboard(command) }
+                            } else {
+                                UiHelpers.showError(this, "Re-clone failed", result.message)
+                            }
+                        }
+                    }
+                }
+            }.start()
+        }
+
         binding.removeButton.setOnClickListener {
             val latest = clone ?: return@setOnClickListener
             UiHelpers.askYesNo(
@@ -131,16 +181,38 @@ class CloneDetailActivity : AppCompatActivity() {
         }
     }
 
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+        clipboard?.setPrimaryClip(
+            android.content.ClipData.newPlainText("ADB command", text)
+        )
+        UiHelpers.toast(this, "Command copied.")
+    }
+
     /**
      * Downscale the picked picture to 192x192 and store it as a PNG
      * in private storage. Small on purpose: the bytes travel with
      * the shortcut request, and Android intents have a size limit.
+     *
+     * The picture is downsampled while it is decoded, not after: a
+     * full camera photo decoded at full size first can run the app
+     * out of memory on a low-end phone. The sample size is chosen
+     * from the picture's real size, so the decoded bitmap is never
+     * much bigger than the 192 pixels it ends up as.
      */
     private fun saveCustomIcon(uri: Uri) {
         val current = clone ?: return
         try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { input ->
+                BitmapFactory.decodeStream(input, null, bounds)
+            }
+            val largestSide = maxOf(bounds.outWidth, bounds.outHeight)
+            var sampleSize = 1
+            while (largestSide / sampleSize > 192) sampleSize *= 2
+            val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
             val bitmap = contentResolver.openInputStream(uri)?.use { input ->
-                BitmapFactory.decodeStream(input)
+                BitmapFactory.decodeStream(input, null, options)
             } ?: run {
                 UiHelpers.toast(this, "That picture could not be read.")
                 return

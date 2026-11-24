@@ -153,6 +153,10 @@ class WorkProfileCloneEngine(
     }
 
     override fun removeClone(clone: CloneInfo): Boolean {
+        // With no profile the request would go nowhere and no
+        // answer would ever come back — say so at once instead of
+        // showing "Removal started…" for a removal that never runs.
+        if (!profileManager.isProfileReady()) return false
         val sent = profileManager.sendProfileIntent(
             profileManager.profileRequestIntent(
                 operation = ProfileManager.OP_REMOVE,
@@ -164,6 +168,7 @@ class WorkProfileCloneEngine(
     }
 
     override fun setFrozen(clone: CloneInfo, frozen: Boolean): Boolean {
+        if (!profileManager.isProfileReady()) return false
         return profileManager.sendProfileIntent(
             profileManager.profileRequestIntent(
                 operation = ProfileManager.OP_FREEZE,

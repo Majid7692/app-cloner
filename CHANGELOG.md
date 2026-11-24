@@ -5,6 +5,58 @@ Keep a Changelog, and the project uses Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-11-23
+
+### Fixed
+- Main screen showed the profile switch ON while the profile was
+  "not set up": the profile handle was the first other user on the
+  phone, which on Xiaomi phones is the Dual Apps user (user 999),
+  not a work profile. The handle now only counts when this app
+  owns a managed profile, and the switch stays OFF and disabled
+  until a profile exists.
+- The profile switch fired on its own every launch: the first
+  value the screen showed was ON, and setting the switch
+  programmatically runs its listener, which tried to switch a
+  profile that did not exist — and could silently turn a quiet
+  profile back ON. Programmatic changes are now ignored by the
+  listener, and the switch starts OFF.
+- The picker added the clone and said "Clone created" before the
+  install had even finished. The clone now appears only when the
+  profile answers that the install worked; until then the screen
+  says it is installing.
+- Setup said the profile was created on the system's OK answer
+  alone, and crashed if the phone offered no provisioning screen
+  at all. Success is now checked against the real profile, the
+  launch is guarded, and the error names the two usual causes on
+  Xiaomi phones (Mi account not signed in, a profile already
+  exists).
+- The battery step ticked itself done when its button was tapped,
+  whether or not the setting was changed. It is now only shown
+  when the phone really lets App Cloner run in the background.
+- The Limits screen and the "clone is not ready" error promised a
+  "Re-clone" button that did not exist. The detail screen now has
+  one: it installs the same app into the profile again, keeping
+  its name and place in the list.
+- Freeze and remove said "started" with no profile behind them.
+  Both now refuse at once when no profile exists.
+- Picking a big photo as a clone icon decoded it at full size
+  first, which could run the app out of memory. Photos are now
+  downsampled while decoding.
+
+### Added
+- Search in the app picker: type a name and the list narrows to
+  matches. Long app lists without search are the most common
+  complaint about other cloners.
+- One "next step" line on the main screen, from the real state:
+  set up the profile, clone an app, test a notification, or the
+  2-clone limit. Buttons that cannot do anything yet are
+  switched off instead of failing after a tap.
+- Clone names are numbered by default ("WhatsApp 2"), so the
+  list and the home screen shortcut are easy to tell from the
+  original — the convention other cloners use.
+- The detail screen shows when a clone was created, and the
+  Limits screen names the Xiaomi Dual Apps clash plainly.
+
 ## [1.0.2] — 2026-11-23
 
 ### Fixed

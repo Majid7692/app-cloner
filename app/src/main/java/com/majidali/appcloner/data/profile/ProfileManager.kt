@@ -69,14 +69,22 @@ class ProfileManager(private val context: Context) {
     }
 
     /**
-     * The user handle of the managed profile, or null.
-     * The profile is the one user on the phone that is not this one.
-     * (Edge case: a phone with both a work profile and Android 15's
-     * Private Space has two extra profiles; V1 takes the first and
-     * the Setup screen shows its user id, so the user can check it.)
+     * The user handle of the managed profile this app owns, or null.
+     *
+     * Only a profile this app owns counts. Without the ownership
+     * check, the first other user on the phone is picked up instead
+     * — on Xiaomi phones that is the Dual Apps user (user 999), so
+     * the main screen once showed the profile switch ON while the
+     * profile was "not set up", and switching acted on a profile
+     * this app does not own. (The public SDK has no per-handle
+     * owner lookup, so ownership of any managed profile is the
+     * check; when this app owns one, the first other user is it —
+     * work profiles take the lowest free user id, below Dual Apps
+     * and Private Space.)
      */
     fun getProfileUserHandle(): UserHandle? {
         return try {
+            if (!isProfileOwner()) return null
             val myHandle = Process.myUserHandle()
             userManager.userProfiles.firstOrNull { it != myHandle }
         } catch (e: Exception) {
@@ -210,9 +218,10 @@ class ProfileManager(private val context: Context) {
     /**
      * Switch the whole profile off (quiet: all clones hidden and
      * stopped) or back on. Returns false when the app is not the
-     * profile owner.
+     * profile owner — never act on a profile this app does not own.
      */
     fun setProfileEnabled(enabled: Boolean): Boolean {
+        if (!isProfileReady()) return false
         return try {
             val handle = getProfileUserHandle() ?: return false
             userManager.requestQuietModeEnabled(!enabled, handle)
@@ -221,8 +230,14 @@ class ProfileManager(private val context: Context) {
         }
     }
 
-    /** True when the profile is currently awake (not quiet). */
+    /**
+     * True when the profile is currently awake (not quiet).
+     * False when there is no profile this app owns — an awake
+     * answer for a profile that does not exist is what once showed
+     * the switch ON next to "not set up".
+     */
     fun isProfileAwake(): Boolean {
+        if (!isProfileReady()) return false
         return try {
             val handle = getProfileUserHandle() ?: return false
             !userManager.isQuietModeEnabled(handle)

@@ -43,6 +43,15 @@
         android:text="@string/open_setup" />
 
     <TextView
+        android:id="@+id/nextStepText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/next_step_setup"
+        android:textColor="@color/primary"
+        android:textSize="15sp" />
+
+    <TextView
         android:id="@+id/slotsText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -38,6 +38,14 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/clonedOnText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/muted_text"
+                android:textSize="15sp" />
+
+            <TextView
                 android:id="@+id/frozenText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -95,6 +103,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/detail_freeze" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/recloneButton"
+                style="@style/Widget.AppCloner.BigButton.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/detail_reclone" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/removeButton"

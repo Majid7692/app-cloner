@@ -23,6 +23,11 @@
     <string name="open_setup">Open setup</string>
     <string name="share_file">Share a file with a clone</string>
     <string name="empty_clones">No clones yet.\n\nTap “Clone an app” and pick one — WhatsApp, TikTok, or any app you use twice.</string>
+    <string name="empty_no_profile">No work profile yet.\n\nOpen Setup, create the profile, then come back and clone an app.</string>
+    <string name="next_step_setup">Next step: open Setup and create the work profile.</string>
+    <string name="next_step_clone">Next step: tap “Clone an app” and pick WhatsApp or TikTok.</string>
+    <string name="next_step_test">All set. To test: close this app, then send the clone a message — it should notify on its own.</string>
+    <string name="next_step_full">You have 2 clones — the V1 limit. Remove one to clone another.</string>
     <string name="clones_count">Clones: %1$d of %2$d</string>
     <string name="frozen_badge">Frozen</string>
     <string name="open_button">Open</string>
@@ -41,7 +46,7 @@
     <string name="step2_title">2. The “organisation” warning</string>
     <string name="step2_body">Android will say an organisation will manage this profile. That “organisation” is this app, on your own phone. Nothing is sent anywhere, no one else can see the profile, and you can delete it any time from Settings.</string>
     <string name="step3_title">3. Battery — let notifications through</string>
-    <string name="step3_body">Some phones stop background apps to save power, which also stops clone notifications. Open the battery settings and allow App Cloner to run in the background. On Xiaomi phones this step matters most.</string>
+    <string name="step3_body">Some phones stop background apps to save power, which also stops clone notifications. Open the battery settings, find App Cloner, and set it to “No restrictions”. On Xiaomi phones this step matters most — and the tick below only appears once the phone really allows it.</string>
     <string name="step3_button">Open battery settings</string>
     <string name="step3_done">Done — battery step finished.</string>
     <string name="step4_title">4. Notifications (Android 13 and newer)</string>
@@ -57,8 +62,11 @@
 
     <!-- App picker -->
     <string name="picker_hint">Only apps with a home screen icon are listed. System apps are listed too, but most of them are not worth cloning.</string>
+    <string name="picker_search_hint">Search apps by name</string>
     <string name="picker_loading">Loading apps…</string>
     <string name="picker_empty">No apps found.</string>
+    <string name="picker_no_match">No apps match that search. Try a different name.</string>
+    <string name="picker_installing">Installing %1$s… it appears in the list when Android finishes.</string>
     <string name="split_note">Split APK — base + extra parts</string>
     <string name="cloned_badge">Cloned</string>
 
@@ -69,6 +77,8 @@
     <string name="detail_pick_icon">Pick a new icon</string>
     <string name="detail_shortcut">Add home screen shortcut</string>
     <string name="detail_freeze">Freeze / unfreeze</string>
+    <string name="detail_reclone">Re-clone this app</string>
+    <string name="detail_cloned_on">Cloned on %1$s</string>
     <string name="detail_remove">Remove clone</string>
     <string name="detail_frozen_note">This clone is frozen: it does not run and sends no notifications. Unfreeze it to use it again.</string>
     <string name="detail_package_label">Original app</string>
@@ -81,5 +91,5 @@
 
     <!-- Limits screen -->
     <string name="limits_heading">Honest limits</string>
-    <string name="limits_body">Work profile clones are real installs.\n\nNotifications arrive normally, and banking apps work in a clone, because the clone is a genuine second install of the same app — not a trick copy.\n\nSandbox clones (coming in V2) are different: banking will not work in a sandbox, and notifications may arrive late, because the sandbox cannot pass the checks banks rely on.\n\nNo promise of 100 live accounts.\n\nOne phone can hold a few copies. A hundred accounts on one phone gets noticed and banned by the apps themselves. V1 allows 2 clones.\n\nProxy is off by default.\n\nA proxy is an advanced option for V2 only, and it does not hide the phone — a proxy can leak the real address, so it is never sold as protection.\n\nUpdates do not break clones.\n\nA clone is a separate install, so updating the original app leaves the clone alone. If a clone ever stops opening after an update, open its detail screen and re-clone it.\n\nSome apps refuse a second copy.\n\nGoogle apps, WhatsApp, YouTube, Snapchat and OneDrive check for this and may refuse to run cloned. That is their decision, not a bug in this app — the Limits list is kept up to date in the README.</string>
+    <string name="limits_body">Work profile clones are real installs.\n\nNotifications arrive normally, and banking apps work in a clone, because the clone is a genuine second install of the same app — not a trick copy.\n\nSandbox clones (coming in V2) are different: banking will not work in a sandbox, and notifications may arrive late, because the sandbox cannot pass the checks banks rely on.\n\nNo promise of 100 live accounts.\n\nOne phone can hold a few copies. A hundred accounts on one phone gets noticed and banned by the apps themselves. V1 allows 2 clones.\n\nProxy is off by default.\n\nA proxy is an advanced option for V2 only, and it does not hide the phone — a proxy can leak the real address, so it is never sold as protection.\n\nUpdates do not break clones.\n\nA clone is a separate install, so updating the original app leaves the clone alone. If a clone ever stops opening after an update, open its detail screen and re-clone it.\n\nSome apps refuse a second copy.\n\nGoogle apps, WhatsApp, YouTube, Snapchat and OneDrive check for this and may refuse to run cloned. That is their decision, not a bug in this app — the Limits list is kept up to date in the README.\n\nOn Xiaomi phones.\n\nXiaomi’s own Dual Apps can fight with this app over the same app — if Dual Apps already clones an app, turn that copy off before cloning it here. Xiaomi also blocks work profile setup until your Mi account is signed in and USB debugging and Install via USB are on.\n\nIf a clone stops opening.\n\nOpen its detail screen and tap “Re-clone this app”. It installs the same app again into the profile, keeping its name and place in the list.</string>
 </resources>

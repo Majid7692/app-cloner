@@ -477,3 +477,288 @@ always moves forward.
 3. If it still crashes, open it once more: the crash screen now
    runs on plain framework classes, so it should show the exact
    error. Screenshot it or tap Share and send it.
+
+## v1.0.3 — overnight review + fixes (2026-11-23)
+
+v1.0.2 opened on the Redmi 13C (screenshot 23:16 PKT: My clones
+screen). MAJID delegated the overnight work: review the whole app
+like a professional, research the cloners already on the Play
+Store, fix everything, bring it to properly working condition.
+This section is that review: every issue found, what changed,
+what was deliberately NOT added, and the verification. No push,
+no release — publishing waits for his morning approval.
+
+### Research — Play Store cloners (listings + user reviews)
+
+- **Parallel Space** (260M installs, 4.1★, 59.3 MB, ads): users
+  love multi-account, hate the ads, crashes and excess
+  permissions; some apps cannot clone at all
+  (`REQUIRE_SECURE_ENV`); free version caps at 2 accounts.
+- **Dual Space / Multiple Accounts** (83M installs, 4.4★):
+  Privacy Zone hidden apps, fast switching; complaints: ads on
+  every click, accounts suspended, clones not opening after
+  updates, **no search in the app list**, notifications not
+  arriving.
+- **2Accounts** (50M installs, 4.2★): per-clone app info page
+  (creation time, running time, storage), stop app, clear data,
+  desktop icon; complaints: ads, clone notifications missing,
+  battery drains 2×, the app must stay open.
+- **Island** (work-profile sandbox): clone, freeze + auto-freeze,
+  hide/archive apps, per-profile VPN, no root, no ads.
+- **Shelter** (F-Droid, open source, work profile): clone,
+  freeze, auto-freeze on screen off, file shuttle, pause whole
+  profile, batch-freeze shortcut, unfreeze+launch shortcut,
+  install APK into profile, allow widgets; maintenance mode.
+  MIUI warning: cloning non-system apps may not work on MIUI,
+  suggests cloning the app store into the profile and installing
+  from there; "no other work profile — remove an existing one
+  first".
+- **App Cloner by AppListo** (APK cloning, 200+ modding options):
+  rename/icon, remove permissions, disable auto-start, password
+  protect, incognito, Wi-Fi only, hosts blocker, SOCKS proxy.
+  Warning: re-signing breaks Google services; most Google apps
+  and WhatsApp cannot clone.
+- **Green Cloner by Oscar Mayo** (v1.6.0, 2.78★, 2.7k installs,
+  launched Oct 2026, free with ads; MAJID already uses it on the
+  same phone): virtualization, 1–10 copies in one go, each
+  numbered 2, 3, 4… + home-screen shortcut, long-press clone
+  menu (open / add to home / force-stop / clear data / delete);
+  complaints: clones return to the launcher instead of opening,
+  crashes on picture upload, no shortcut support on emulators.
+
+What V1 took from this (ideas only, own words, own code):
+search in the picker (the most common complaint), Re-clone /
+repair (clones not opening after updates), numbered clone names
+("WhatsApp 2", Green Cloner's convention), "cloned on" date on
+the detail screen (2Accounts' per-clone info), honest limits
+stated up front (every listing's users complain when a promise
+breaks). Nothing else from these apps fits V1 honestly — see
+"Deliberately NOT added".
+
+### Research — local repos (ideas + helper tools only, no code copied)
+
+- **kaedea/dualapp-mediastore-compatibility** (NO LICENSE —
+  local reference only): MediaStore / File IO compatibility
+  tests HostProfile vs WorkProfile / DualApp. Confirms the
+  FileProvider approach between profiles, and the OEM DualApp
+  userId 999 MediaStore path trap. Gave the evidence for issue
+  1 below (user 999 is Dual Apps, not a work profile).
+- **GorvGoyl/Clone-Wars** (AGPL-3.0): curated index of 100+
+  open-source clones of popular apps — NOT cloner tools, no
+  directly applicable idea. Checked, not used.
+- **sharkdp/bat** (MIT + Apache-2.0): binary v0.26.1 at
+  `~/workspace/tools/bat-0.26.1/`, used as file-viewing tooling
+  while reviewing (same as the v1.0.0 build).
+- **Skills collections** (mattpocock/skills, addyosmani
+  agent-skills, anthropics/skills): `ux-review` and
+  `code-review` skills read before the review; the
+  code-review checklist (dead code, duplicated code, fake
+  success states, silent failures) shaped the issue list.
+  No skill text or code was copied into the app.
+
+### Issue list — every gap found, with evidence
+
+P1 — broken / confusing:
+
+1. **Wrong profile handle** (`ProfileManager.getProfileUserHandle`,
+   old code returned the first non-personal user). On Xiaomi
+   phones that is the Dual Apps user (user 999), not a work
+   profile — which is why the screenshot showed the switch ON
+   while the profile was "not set up": `isProfileReady()` was
+   false (not profile owner) but `isProfileAwake()` was true
+   (user 999 is not quiet).
+2. **Switch fired on its own every launch** (`MainActivity`:
+   listener set before the observer; the first LiveData value
+   was `true`). Programmatic `setChecked` fires the listener,
+   so every launch called `setProfileEnabled(true)` — and could
+   silently turn a quiet profile back ON — plus a bogus "could
+   not be switched" toast when no profile existed.
+3. **Picker added the clone before it existed**
+   (`AppPickerActivity.cloneApp`): `addClone()` + "Clone
+   created" toast as soon as the cross-profile intent was SENT,
+   before the install finished; on install failure the entry
+   stayed in the list.
+4. **Setup provisioning unchecked and unguarded**
+   (`SetupActivity`): `provisioningLauncher.launch()` not in
+   try/catch (crash if the phone offers no provisioning screen);
+   RESULT_OK was taken as success without checking the profile
+   really exists; no Mi-account / already-exists guidance.
+5. **Battery step checkmark was fake** (`SetupActivity` step 3:
+   marked done on button tap, never checked the setting).
+6. **Promised Re-clone button did not exist** (`LimitsActivity`
+   text + `MainActivity.openClone` error both said "tap
+   Re-clone").
+7. **Freeze / remove ran with no profile**
+   (`WorkProfileCloneEngine.setFrozen` / `removeClone`): sent
+   requests into the void; callers toasted fake progress.
+8. **Icon picker OOM risk** (`CloneDetailActivity.saveCustomIcon`):
+   decoded the full-size photo, then scaled — a camera photo
+   can run the app out of memory.
+9. **Notification permission permanently denied**: the launcher
+   silently did nothing, the step never completed, no guidance
+   to Settings.
+
+P2 — easy to use:
+
+10. **No search in the picker** — the #1 complaint about other
+    cloners (Dual Space reviews ask for it by name).
+11. **No "what next" guidance**: the main screen left the user
+    to guess; the empty text told the user to tap "Clone an
+    app" even when the button could not work yet.
+12. **Buttons enabled when they cannot work**: "Clone an app"
+    with no profile, "Share a file" with 0 clones.
+13. **Clone list showed no dates** (2Accounts shows creation
+    time per clone; the data was already stored).
+14. **Limits screen said nothing about Xiaomi** (Dual Apps
+    clash, Mi account) — the two things most likely to bite on
+    the Redmi 13C.
+
+Checked and deliberately left alone: cross-profile filters are
+registered once at provisioning and persist system-side — they
+cannot be lost while the profile exists, so no re-registration
+was added. Per-row "not installed" state was skipped (Re-clone
+covers recovery). System-app filtering in the picker was
+skipped (the hint already warns; the user can judge).
+
+### What 1.0.3 changes
+
+- `ProfileManager.getProfileUserHandle()` returns null unless
+  this app owns a managed profile; `isProfileAwake()` and
+  `setProfileEnabled()` require `isProfileReady()` first. The
+  switch is OFF and disabled until a profile exists.
+- `MainActivity`: a guard flag ignores programmatic switch
+  changes; the switch starts OFF. New state-driven "next step"
+  line under the profile status, and empty-state text that
+  changes with the state. "Clone an app" is disabled without a
+  profile or when 2 clones exist; "Share a file" is disabled
+  with 0 clones.
+- `AppPickerActivity`: search box (matches name or package,
+  "No apps match that search" when empty); cloning now only
+  toasts "Installing … it appears in the list when Android
+  finishes" — the clone is added only when the profile answers
+  (`MainActivity.handleProfileResult`).
+- `CloneDetailActivity`: Re-clone button (re-installs the same
+  app into the profile, keeps name and slot); "Cloned on
+  <date>"; icon photos downsampled while decoding
+  (`inSampleSize` to ~192 px).
+- `SetupActivity`: provisioning launch in try/catch with a plain
+  error; success checked against the real profile, not the
+  result code; error names the Mi-account / existing-profile
+  causes. Battery step checks
+  `PowerManager.isIgnoringBatteryOptimizations()` on every
+  resume — the tick appears only when the phone really allows
+  background running. Permanently denied notification
+  permission now shows where the switch lives (Settings →
+  Apps → App Cloner → Notifications).
+- `WorkProfileCloneEngine.setFrozen` / `removeClone` return
+  false at once with no profile.
+- Clone names are numbered by default ("WhatsApp 2") in
+  `handleProfileResult`; the detail screen can still rename.
+- `LimitsActivity` text: Xiaomi Dual Apps clash + Mi account
+  paragraph, and a Re-clone pointer.
+- Version bump: `versionCode 3`, `versionName 1.0.3` in
+  `app/build.gradle.kts` and `build-apk.sh`.
+
+### Deliberately NOT added (with reasons)
+
+- **Auto-freeze on screen off** (Island/Shelter): needs a
+  foreground service → a new permission. Out under the
+  no-new-permissions rule.
+- **Per-profile VPN**: V2 scope.
+- **Clear data / force-stop per clone**: no public API.
+- **APK install into the profile**: V1 scope is cloning
+  installed apps.
+- **AppListo-style modding / permission removal**: needs
+  re-signing, breaks Google login — explicitly out per the
+  research.
+- **Proxy per clone**: off by default, V2 only.
+- **Hidden / secret-zone lock**: freeze already covers hiding;
+  no new permissions for a lock.
+- **Xiaomi "install from Play inside the profile" workaround**:
+  would leave this app's clone list out of sync; the Limits
+  screen instead says the clash plainly.
+
+### Build recovery — /tmp was wiped, scripts rebuilt
+
+The VM restart wiped `/tmp`: `/tmp/deps-manifest.txt`,
+`/tmp/resolve-deps.py` and `/tmp/gen-bindings.py` were gone, so
+the first v1.0.3 build run failed before compiling. Both were
+recreated from scratch (no code copied — the old scripts were
+lost, not recovered):
+
+- `deps-manifest.txt`: rebuilt by walking `~/Android/deps` and
+  taking the newest version per artifact — 77 coordinates,
+  76 after the script's kotlin-stdlib exclusion, exactly the
+  count BUILD-REPORT §3 recorded for the old manifest.
+- `gen-bindings.py`: rewritten; verified standalone first — it
+  generates the same public surface AGP would (inflate ×2,
+  bind, `root` + one property per view id, typed from the
+  layout tag). The layouts use camelCase ids, so the generated
+  `R.id.<name>` references are correct as written.
+- Canonical copies of both now live in `app-cloner-build/`
+  next to `build-apk.sh`, and the script falls back to them
+  when `/tmp` is missing — this failure cannot recur.
+- The previous v1.0.2 APK was backed up to `/tmp/appcloner-v102/`
+  before rebuilding, so the dex could be diffed (see below).
+
+### Verification (v1.0.3 APK)
+
+- Build: `bash app-cloner-build/build-apk.sh` — exit 0. New
+  warnings only: 3 pre-existing kotlinc deprecation warnings
+  (`versionCode` field, `ACTION_UNINSTALL_PACKAGE`,
+  `splitNames != null` always true) — none from the new code.
+- `aapt2 dump badging`: package `com.majidali.appcloner`,
+  `versionCode='3' versionName='1.0.3'`, `minSdkVersion:'28'`,
+  `targetSdkVersion:'36'`, only permission
+  `android.permission.POST_NOTIFICATIONS` (no INTERNET).
+- `apksigner verify --verbose`: Verifies; v3 scheme true;
+  1 signer, cert SHA-256
+  `c3bf95f262634ae658ff4c0e5adef912ffecb2cd8ded44640623bd6648d1e417`
+  — identical to v1.0.1 and v1.0.2, so it installs over v1.0.2
+  with no uninstall.
+- `verify-dex-r.py`: dex 7,073 classes, 2,980 R field
+  references, 74 R classes referenced, 0 missing — "OK: every
+  referenced R class and field exists in the dex".
+- Dex diff vs v1.0.2 (dexdump class lists): 7,068 → 7,073
+  classes; NOTHING removed; only 5 added, all from the app's
+  own new code (`CloneDetailActivity` lambdas for Re-clone,
+  `AppPickerActivity$onCreate$1` for the search box). Zero
+  library classes changed — the rebuilt dependency manifest
+  reproduces the v1.0.2 library set exactly.
+- New ids in the built APK (`aapt2 dump resources`):
+  `id/nextStepText`, `id/searchInput`, `id/clonedOnText`,
+  `id/recloneButton`. New strings present with the right
+  values (`aapt2 dump strings`): "Next step: open Setup…",
+  "Installing %1$s… it appears in the list when Android
+  finishes.", "Re-clone this app", "Cloned on %1$s",
+  "No work profile yet."
+- 0 native `.so` files (16 KB page-size rule still satisfied
+  trivially).
+- No AI branding: grep over `app/src/main` for brand-name / AI-branding
+  branding returns nothing.
+- APK: `app-cloner-build/app-cloner-debug.apk`, 5,096,986
+  bytes, SHA-256
+  `d5dc6e5c0ca9b4531d2e379659e3ff0e6119a36b34e1bc25ea4070a072110293`.
+
+### Install note — v1.0.3 needs NO uninstall
+
+Same debug key as v1.0.1 and v1.0.2, and versionCode moves
+forward (2 → 3), so it installs directly over v1.0.2.
+
+### Phone steps for 1.0.3
+
+1. Install the v1.0.3 APK over v1.0.2 (no uninstall needed).
+2. Open the app. The switch should now be OFF and greyed out,
+   with "Next step: open Setup and create the work profile."
+   under it. "Clone an app" and "Share a file" should be
+   greyed out until they can do something.
+3. Run the §7 checklist as planned — the done point is still
+   the WhatsApp clone notifying without opening the cloner.
+
+### Honest limit
+
+This VM has no emulator and no device. Every check above
+proves the build — that the code compiles, the APK is signed
+with the right key, the resources are in, and no library R
+class is missing. None of it proves the app behaves on the
+phone. Device proof is still the Redmi 13C in the morning.
