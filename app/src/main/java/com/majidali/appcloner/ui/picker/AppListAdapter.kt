@@ -13,10 +13,29 @@ import com.majidali.appcloner.domain.model.AppInfo
  * Already-cloned apps show "Cloned" and cannot be tapped again.
  */
 class AppListAdapter(
-    private val apps: List<AppInfo>,
+    private val allApps: List<AppInfo>,
     private val clonedPackages: Set<String>,
     private val onPick: (AppInfo) -> Unit
 ) : RecyclerView.Adapter<AppListAdapter.AppViewHolder>() {
+
+    // What the list shows right now: the full list, or the matches
+    // for the search box. The list is alphabetical, and the search
+    // matches the app name or the package name.
+    private var shownApps: List<AppInfo> = allApps
+
+    /** Narrow the list to apps whose name or package contains [query]. */
+    fun filter(query: String) {
+        val q = query.trim().lowercase()
+        shownApps = if (q.isEmpty()) {
+            allApps
+        } else {
+            allApps.filter {
+                it.label.lowercase().contains(q) ||
+                    it.packageName.lowercase().contains(q)
+            }
+        }
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
         val binding = ItemAppBinding.inflate(
@@ -26,10 +45,10 @@ class AppListAdapter(
     }
 
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
-        holder.bind(apps[position])
+        holder.bind(shownApps[position])
     }
 
-    override fun getItemCount(): Int = apps.size
+    override fun getItemCount(): Int = shownApps.size
 
     inner class AppViewHolder(
         private val binding: ItemAppBinding

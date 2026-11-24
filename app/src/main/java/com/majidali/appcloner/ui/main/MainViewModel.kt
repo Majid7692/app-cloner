@@ -18,15 +18,22 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     private val _profileReady = MutableLiveData(false)
     val profileReady: LiveData<Boolean> = _profileReady
 
-    private val _profileAwake = MutableLiveData(true)
+    // Starts OFF: the switch must never show ON before the phone
+    // has been asked. (It once started ON, which fired the switch
+    // listener on launch and tried to switch a profile that did
+    // not exist yet.)
+    private val _profileAwake = MutableLiveData(false)
     val profileAwake: LiveData<Boolean> = _profileAwake
 
     /** Re-read everything from storage. Call on resume and after
      *  every change, so the screen never shows stale data. */
     fun refresh() {
         _clones.value = container.cloneRepository.listClones()
-        _profileReady.value = container.profileManager.isProfileReady()
-        _profileAwake.value = container.profileManager.isProfileAwake()
+        val ready = container.profileManager.isProfileReady()
+        _profileReady.value = ready
+        // Awake only means something when a profile exists; without
+        // one the switch stays OFF (see ProfileManager).
+        _profileAwake.value = if (ready) container.profileManager.isProfileAwake() else false
     }
 
     /** How many more clones V1 allows right now. */
